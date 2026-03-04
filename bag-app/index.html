@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="包包打卡" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <title>包包存量 & 每日打卡</title>
+  <style>
+    :root { --bg:#0b0b0d; --card:#141418; --text:#f4f4f6; --muted:#b6b6c2; --line:#24242b; --accent:#7dd3fc; }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+      background: linear-gradient(180deg, #0b0b0d 0%, #08080a 100%);
+      color:var(--text);
+      padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom) 16px;
+    }
+    header{ position:sticky; top:0; backdrop-filter: blur(10px); background: rgba(11,11,13,.65); padding: 14px 0 10px; z-index:10; }
+    h1{ font-size:18px; margin:0 0 6px; letter-spacing:.5px; }
+    .sub{ color:var(--muted); font-size:12px; }
+    .tabs{ display:flex; gap:8px; margin-top:10px; }
+    .tab{
+      flex:1; border:1px solid var(--line); background: transparent; color:var(--text);
+      padding:10px 10px; border-radius:12px; font-weight:600; font-size:13px;
+    }
+    .tab.active{ border-color: rgba(125,211,252,.55); box-shadow: 0 0 0 2px rgba(125,211,252,.15) inset; }
+    main{ padding: 14px 0 40px; }
+    .card{
+      border:1px solid var(--line); background: rgba(20,20,24,.9);
+      border-radius:16px; padding:14px; margin:12px 0;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; }
+    label{ font-size:12px; color:var(--muted); display:block; margin-bottom:6px; }
+    input, select, textarea{
+      width:100%; background:#0f0f13; color:var(--text); border:1px solid var(--line);
+      border-radius:12px; padding:12px; font-size:14px; outline:none;
+    }
+    textarea{ min-height:80px; resize:vertical; }
+    .col{ flex:1; min-width: 140px; }
+    .btn{
+      border:1px solid var(--line); background:#0f0f13; color:var(--text);
+      padding:12px 12px; border-radius:12px; font-weight:700; font-size:14px; width:100%;
+    }
+    .btn.primary{
+      border-color: rgba(125,211,252,.55);
+      box-shadow: 0 0 0 2px rgba(125,211,252,.12) inset;
+    }
+    .btn.danger{ border-color: rgba(248,113,113,.55); box-shadow: 0 0 0 2px rgba(248,113,113,.10) inset; }
+    .list{ display:flex; flex-direction:column; gap:10px; }
+    .item{
+      border:1px solid var(--line); background:#0f0f13; border-radius:14px; padding:12px;
+      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+    }
+    .item h3{ margin:0; font-size:14px; }
+    .meta{ font-size:12px; color:var(--muted); margin-top:4px; line-height:1.35; }
+    .pill{ display:inline-block; padding:3px 8px; border-radius:999px; border:1px solid var(--line); font-size:12px; color:var(--muted); }
+    .actions{ display:flex; flex-direction:column; gap:8px; min-width:110px; }
+    .small{ padding:10px; font-size:13px; }
+    .kpis{ display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; }
+    .kpi{ border:1px solid var(--line); background:#0f0f13; border-radius:14px; padding:12px; }
+    .kpi .v{ font-size:18px; font-weight:900; }
+    .kpi .t{ font-size:12px; color:var(--muted); margin-top:4px; }
+    .muted{ color:var(--muted); }
+    .hr{ height:1px; background:var(--line); margin:12px 0; }
+    .footer-note{ font-size:12px; color:var(--muted); text-align:center; margin-top:18px; }
+    .hidden{ display:none; }
+    .right{ text-align:right; }
+    .badge{
+      display:inline-block; padding:4px 10px; border-radius:999px;
+      background: rgba(125,211,252,.10); border:1px solid rgba(125,211,252,.35);
+      font-size:12px; color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>包包存量 & 每日使用打卡</h1>
+    <div class="sub">本地保存 · 无需登录 · 适合添加到 iPhone 主屏幕</div>
+    <div class="tabs">
+      <button class="tab active" data-tab="tab-checkin">今日打卡</button>
+      <button class="tab" data-tab="tab-inventory">包包存量</button>
+      <button class="tab" data-tab="tab-stats">统计</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- 今日打卡 -->
+    <section id="tab-checkin" class="card">
+      <div class="row" style="align-items:end;">
+        <div class="col">
+          <label>日期</label>
+          <input id="checkinDate" type="date" />
+        </div>
+        <div class="col">
+          <label>选择今天用的包</label>
+          <select id="checkinBag"></select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label>场景（可选）</label>
+          <input id="checkinScene" placeholder="例如：上班 / 讲座 / 博物馆 / 出差" />
+        </div>
+        <div class="col">
+          <label>时长（可选）</label>
+          <select id="checkinDuration">
+            <option value="">未填写</option>
+            <option value="短">短（<2h）</option>
+            <option value="半天">半天</option>
+            <option value="全天">全天</option>
+            <option value="旅行">旅行/出差</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label>备注（可选）</label>
+          <textarea id="checkinNote" placeholder="例如：背负舒适、容量刚好、与穿搭很配等"></textarea>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col"><button class="btn primary" id="btnSaveCheckin">✅ 保存打卡</button></div>
+        <div class="col"><button class="btn" id="btnTodayQuick">⚡ 一键今天</button></div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <div><span class="badge">最近 10 条</span></div>
+        <div class="right"><button class="btn small danger" id="btnClearCheckins">清空打卡记录</button></div>
+      </div>
+      <div id="recentCheckins" class="list" style="margin-top:10px;"></div>
+    </section>
+
+    <!-- 包包存量 -->
+    <section id="tab-inventory" class="card hidden">
+      <div class="row">
+        <div class="col">
+          <label>品牌</label>
+          <input id="bagBrand" placeholder="例如：Hermès / LV / Chanel" />
+        </div>
+        <div class="col">
+          <label>型号/名称</label>
+          <input id="bagModel" placeholder="例如：Evelyne / Speedy 25 / Coco Handle" />
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label>颜色（可选）</label>
+          <input id="bagColor" placeholder="例如：黑 / 金棕 / 棋盘格" />
+        </div>
+        <div class="col">
+          <label>容量标签（可选）</label>
+          <select id="bagCapacity">
+            <option value="">未填写</option>
+            <option value="小">小</option>
+            <option value="中">中</option>
+            <option value="大">大</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label>购买年份（可选）</label>
+          <input id="bagYear" type="number" min="1980" max="2100" placeholder="例如：2023" />
+        </div>
+        <div class="col">
+          <label>状态（可选）</label>
+          <select id="bagStatus">
+            <option value="在用">在用</option>
+            <option value="收藏">收藏</option>
+            <option value="待出手">待出手</option>
+            <option value="维修/保养">维修/保养</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label>备注（可选）</label>
+          <textarea id="bagNote" placeholder="例如：适合讲座、能装水杯、低调等"></textarea>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col"><button class="btn primary" id="btnAddBag">➕ 添加/保存包包</button></div>
+        <div class="col"><button class="btn" id="btnSeed">✨ 导入示例（你那几只）</button></div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row" style="align-items:end;">
+        <div class="col">
+          <label>搜索</label>
+          <input id="bagSearch" placeholder="输入品牌/型号/颜色关键词" />
+        </div>
+        <div class="col">
+          <label>筛选状态</label>
+          <select id="bagFilterStatus">
+            <option value="">全部</option>
+            <option value="在用">在用</option>
+            <option value="收藏">收藏</option>
+            <option value="待出手">待出手</option>
+            <option value="维修/保养">维修/保养</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="bagList" class="list" style="margin-top:12px;"></div>
+      <div class="footer-note">提示：长久使用建议定期“导出数据”（见统计页）。</div>
+    </section>
+
+    <!-- 统计 -->
+    <section id="tab-stats" class="card hidden">
+      <div class="kpis">
+        <div class="kpi"><div class="v" id="kpiBags">0</div><div class="t">包包总数</div></div>
+        <div class="kpi"><div class="v" id="kpiCheckins">0</div><div class="t">打卡总数</div></div>
+        <div class="kpi"><div class="v" id="kpiStreak">0</div><div class="t">连续打卡天数</div></div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row" style="align-items:end;">
+        <div class="col">
+          <label>统计区间</label>
+          <select id="statsRange">
+            <option value="30">近 30 天</option>
+            <option value="90">近 90 天</option>
+            <option value="365">近 365 天</option>
+            <option value="all">全部</option>
+          </select>
+        </div>
+        <div class="col">
+          <button class="btn" id="btnRefreshStats">🔄 刷新统计</button>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div>
+        <div class="row" style="justify-content:space-between; align-items:center;">
+          <div><span class="badge">使用频率 Top 10</span></div>
+        </div>
+        <div id="topUsage" class="list" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row">
+        <div class="col"><button class="btn" id="btnExport">⬇️ 导出数据（JSON）</button></div>
+        <div class="col"><button class="btn danger" id="btnResetAll">⚠️ 清空全部数据</button></div>
+      </div>
+      <p class="muted" style="font-size:12px; line-height:1.5; margin-top:10px;">
+        导出会生成一个 JSON 文件（包含包包列表与打卡记录）。清空数据不可恢复，谨慎操作。
+      </p>
+    </section>
+  </main>
+
+  <script>
+    // --- Storage Keys ---
+    const KEY_BAGS = "bag_app_bags_v1";
+    const KEY_CHECKINS = "bag_app_checkins_v1";
+
+    // --- Helpers ---
+    const $ = (id) => document.getElementById(id);
+    const todayISO = () => {
+      const d = new Date();
+      const tz = d.getTimezoneOffset() * 60000;
+      return new Date(d - tz).toISOString().slice(0,10);
+    };
+    const uid = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(2,7);
+
+    function loadBags(){
+      try { return JSON.parse(localStorage.getItem(KEY_BAGS) || "[]"); } catch { return []; }
+    }
+    function saveBags(bags){
+      localStorage.setItem(KEY_BAGS, JSON.stringify(bags));
+    }
+    function loadCheckins(){
+      try { return JSON.parse(localStorage.getItem(KEY_CHECKINS) || "[]"); } catch { return []; }
+    }
+    function saveCheckins(checkins){
+      localStorage.setItem(KEY_CHECKINS, JSON.stringify(checkins));
+    }
+
+    function bagDisplay(b){
+      const parts = [b.brand, b.model].filter(Boolean).join(" ");
+      const extra = [b.color, b.capacity].filter(Boolean).join(" · ");
+      return extra ? `${parts}（${extra}）` : parts;
+    }
+
+    // --- Tabs ---
+    document.querySelectorAll(".tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const tabId = btn.dataset.tab;
+        ["tab-checkin","tab-inventory","tab-stats"].forEach(id => $(id).classList.toggle("hidden", id !== tabId));
+        if(tabId === "tab-inventory"){ renderBags(); }
+        if(tabId === "tab-checkin"){ renderBagSelect(); renderRecentCheckins(); }
+        if(tabId === "tab-stats"){ refreshStats(); }
+      });
+    });
+
+    // --- Inventory: Add/Update ---
+    let editingBagId = null;
+
+    $("btnAddBag").addEventListener("click", () => {
+      const brand = $("bagBrand").value.trim();
+      const model = $("bagModel").value.trim();
+      if(!brand || !model){
+        alert("请至少填写：品牌 + 型号/名称");
+        return;
+      }
+      const bag = {
+        id: editingBagId || uid(),
+        brand, model,
+        color: $("bagColor").value.trim(),
+        capacity: $("bagCapacity").value,
+        year: $("bagYear").value ? Number($("bagYear").value) : null,
+        status: $("bagStatus").value,
+        note: $("bagNote").value.trim(),
+        updatedAt: Date.now()
+      };
+
+      const bags = loadBags();
+      const idx = bags.findIndex(x => x.id === bag.id);
+      if(idx >= 0) bags[idx] = bag; else bags.unshift(bag);
+      saveBags(bags);
+
+      editingBagId = null;
+      $("btnAddBag").textContent = "➕ 添加/保存包包";
+      ["bagBrand","bagModel","bagColor","bagYear","bagNote"].forEach(id => $(id).value = "");
+      $("bagCapacity").value = "";
+      $("bagStatus").value = "在用";
+
+      renderBags();
+      renderBagSelect();
+      alert("已保存 ✅");
+    });
+
+    $("btnSeed").addEventListener("click", () => {
+      const bags = loadBags();
+      if(bags.length){
+        if(!confirm("已存在包包数据，仍要导入示例吗？（会追加，不会覆盖）")) return;
+      }
+      const seed = [
+        {brand:"Hermès", model:"Birkin", color:"", capacity:"大", year:null, status:"收藏", note:"", id:uid(), updatedAt:Date.now()},
+        {brand:"Hermès", model:"Kelly", color:"", capacity:"中", year:null, status:"收藏", note:"", id:uid(), updatedAt:Date.now()},
+        {brand:"Hermès", model:"Evelyne", color:"", capacity:"中", year:null, status:"在用", note:"适合日常", id:uid(), updatedAt:Date.now()},
+        {brand:"Louis Vuitton", model:"Diane", color:"", capacity:"中", year:null, status:"在用", note:"", id:uid(), updatedAt:Date.now()},
+        {brand:"Louis Vuitton", model:"Speedy 25", color:"", capacity:"中", year:null, status:"在用", note:"", id:uid(), updatedAt:Date.now()},
+        {brand:"Louis Vuitton", model:"Pochette Métis", color:"", capacity:"中", year:null, status:"在用", note:"", id:uid(), updatedAt:Date.now()}
+      ];
+      saveBags(seed.concat(loadBags()));
+      renderBags();
+      renderBagSelect();
+      alert("示例已导入 ✅");
+    });
+
+    $("bagSearch").addEventListener("input", renderBags);
+    $("bagFilterStatus").addEventListener("change", renderBags);
+
+    function renderBags(){
+      const bags = loadBags();
+      const q = $("bagSearch").value.trim().toLowerCase();
+      const st = $("bagFilterStatus").value;
+
+      const filtered = bags.filter(b => {
+        const text = `${b.brand} ${b.model} ${b.color||""} ${b.note||""}`.toLowerCase();
+        const okQ = q ? text.includes(q) : true;
+        const okS = st ? b.status === st : true;
+        return okQ && okS;
+      });
+
+      const el = $("bagList");
+      el.innerHTML = "";
+      if(!filtered.length){
+        el.innerHTML = `<div class="muted">暂无包包。先在上面添加，或点“导入示例”。</div>`;
+        return;
+      }
+
+      filtered.forEach(b => {
+        const div = document.createElement("div");
+        div.className = "item";
+        div.innerHTML = `
+          <div>
+            <h3>${escapeHtml(b.brand)} ${escapeHtml(b.model)} <span class="pill">${escapeHtml(b.status||"")}</span></h3>
+            <div class="meta">
+              ${b.color ? `颜色：${escapeHtml(b.color)} · ` : ""}${b.capacity ? `容量：${escapeHtml(b.capacity)} · ` : ""}${b.year ? `年份：${b.year}` : ""}
+              ${b.note ? `<div style="margin-top:6px;">备注：${escapeHtml(b.note)}</div>` : ""}
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn small" data-act="edit" data-id="${b.id}">编辑</button>
+            <button class="btn small danger" data-act="del" data-id="${b.id}">删除</button>
+          </div>
+        `;
+        el.appendChild(div);
+      });
+
+      el.querySelectorAll("button").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const act = btn.dataset.act;
+          const id = btn.dataset.id;
+          if(act === "edit") startEditBag(id);
+          if(act === "del") deleteBag(id);
+        });
+      });
+    }
+
+    function startEditBag(id){
+      const b = loadBags().find(x => x.id === id);
+      if(!b) return;
+      editingBagId = b.id;
+      $("bagBrand").value = b.brand || "";
+      $("bagModel").value = b.model || "";
+      $("bagColor").value = b.color || "";
+      $("bagCapacity").value = b.capacity || "";
+      $("bagYear").value = b.year || "";
+      $("bagStatus").value = b.status || "在用";
+      $("bagNote").value = b.note || "";
+      $("btnAddBag").textContent = "💾 保存修改";
+      window.scrollTo({top:0, behavior:"smooth"});
+    }
+
+    function deleteBag(id){
+      const bags = loadBags();
+      const b = bags.find(x => x.id === id);
+      if(!b) return;
+      const ok = confirm(`确定删除：${b.brand} ${b.model}？\n注意：已打卡记录不会被删除，但会显示为“已删除的包”。`);
+      if(!ok) return;
+      saveBags(bags.filter(x => x.id !== id));
+      renderBags();
+      renderBagSelect();
+    }
+
+    // --- Check-in ---
+    $("checkinDate").value = todayISO();
+    $("btnTodayQuick").addEventListener("click", () => $("checkinDate").value = todayISO());
+
+    $("btnSaveCheckin").addEventListener("click", () => {
+      const date = $("checkinDate").value;
+      const bagId = $("checkinBag").value;
+      if(!date){ alert("请选择日期"); return; }
+      if(!bagId){ alert("请选择包包"); return; }
+
+      const checkins = loadCheckins();
+      // 同一天可多次记录？这里默认：同一天同一只包只保留一条（会覆盖）
+      const idx = checkins.findIndex(c => c.date === date && c.bagId === bagId);
+      const item = {
+        id: idx >= 0 ? checkins[idx].id : uid(),
+        date,
+        bagId,
+        scene: $("checkinScene").value.trim(),
+        duration: $("checkinDuration").value,
+        note: $("checkinNote").value.trim(),
+        createdAt: Date.now()
+      };
+      if(idx >= 0) checkins[idx] = item; else checkins.unshift(item);
+      saveCheckins(checkins);
+
+      $("checkinScene").value = "";
+      $("checkinDuration").value = "";
+      $("checkinNote").value = "";
+
+      renderRecentCheckins();
+      refreshStats();
+      alert("打卡已保存 ✅");
+    });
+
+    $("btnClearCheckins").addEventListener("click", () => {
+      if(!confirm("确定清空所有打卡记录？不可恢复。")) return;
+      saveCheckins([]);
+      renderRecentCheckins();
+      refreshStats();
+    });
+
+    function renderBagSelect(){
+      const bags = loadBags();
+      const sel = $("checkinBag");
+      const prev = sel.value;
+      sel.innerHTML = "";
+      if(!bags.length){
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "请先在“包包存量”添加包包";
+        sel.appendChild(opt);
+        sel.disabled = true;
+        return;
+      }
+      sel.disabled = false;
+      bags.forEach(b => {
+        const opt = document.createElement("option");
+        opt.value = b.id;
+        opt.textContent = bagDisplay(b);
+        sel.appendChild(opt);
+      });
+      if(prev) sel.value = prev;
+    }
+
+    function renderRecentCheckins(){
+      const bags = loadBags();
+      const bagMap = new Map(bags.map(b => [b.id, b]));
+      const checkins = loadCheckins().slice().sort((a,b)=> (b.date+a.createdAt) < (a.date+b.createdAt) ? -1 : 1);
+      const recent = checkins.slice(0,10);
+
+      const el = $("recentCheckins");
+      el.innerHTML = "";
+      if(!recent.length){
+        el.innerHTML = `<div class="muted">还没有打卡记录。今天就来一条 😄</div>`;
+        return;
+      }
+
+      recent.forEach(c => {
+        const b = bagMap.get(c.bagId);
+        const title = b ? bagDisplay(b) : "（已删除的包）";
+        const meta = [
+          c.scene ? `场景：${c.scene}` : null,
+          c.duration ? `时长：${c.duration}` : null,
+          c.note ? `备注：${c.note}` : null
+        ].filter(Boolean).join(" · ");
+
+        const div = document.createElement("div");
+        div.className = "item";
+        div.innerHTML = `
+          <div>
+            <h3>${escapeHtml(c.date)} <span class="pill">${escapeHtml(title)}</span></h3>
+            <div class="meta">${meta ? escapeHtml(meta) : "（无备注）"}</div>
+          </div>
+          <div class="actions">
+            <button class="btn small danger" data-act="del" data-id="${c.id}">删除</button>
+          </div>
+        `;
+        el.appendChild(div);
+      });
+
+      el.querySelectorAll("button").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.dataset.id;
+          if(!confirm("删除这条打卡记录？")) return;
+          saveCheckins(loadCheckins().filter(x => x.id !== id));
+          renderRecentCheckins();
+          refreshStats();
+        });
+      });
+    }
+
+    // --- Stats ---
+    $("btnRefreshStats").addEventListener("click", refreshStats);
+
+    function refreshStats(){
+      const bags = loadBags();
+      const checkins = loadCheckins();
+      $("kpiBags").textContent = bags.length.toString();
+      $("kpiCheckins").textContent = checkins.length.toString();
+      $("kpiStreak").textContent = calcStreak(checkins).toString();
+      renderTopUsage();
+    }
+
+    function calcStreak(checkins){
+      // 以“有任意打卡则算一天”为连续天数
+      const dates = new Set(checkins.map(c => c.date));
+      if(!dates.size) return 0;
+      let streak = 0;
+      let d = new Date(todayISO());
+      while(true){
+        const iso = d.toISOString().slice(0,10);
+        if(dates.has(iso)){
+          streak += 1;
+          d.setDate(d.getDate()-1);
+        }else{
+          break;
+        }
+      }
+      return streak;
+    }
+
+    function renderTopUsage(){
+      const range = $("statsRange").value;
+      const bags = loadBags();
+      const bagMap = new Map(bags.map(b => [b.id, b]));
+      const checkins = loadCheckins();
+
+      const cutoff = (() => {
+        if(range === "all") return null;
+        const days = Number(range);
+        const d = new Date(todayISO());
+        d.setDate(d.getDate() - (days-1));
+        return d.toISOString().slice(0,10);
+      })();
+
+      const filtered = cutoff ? checkins.filter(c => c.date >= cutoff) : checkins.slice();
+
+      const counts = new Map();
+      filtered.forEach(c => counts.set(c.bagId, (counts.get(c.bagId)||0) + 1));
+
+      const rows = Array.from(counts.entries())
+        .map(([bagId, n]) => ({ bagId, n }))
+        .sort((a,b)=> b.n - a.n)
+        .slice(0,10);
+
+      const el = $("topUsage");
+      el.innerHTML = "";
+      if(!rows.length){
+        el.innerHTML = `<div class="muted">该区间暂无打卡记录。</div>`;
+        return;
+      }
+
+      rows.forEach(r => {
+        const b = bagMap.get(r.bagId);
+        const name = b ? bagDisplay(b) : "（已删除的包）";
+        const div = document.createElement("div");
+        div.className = "item";
+        div.innerHTML = `
+          <div>
+            <h3>${escapeHtml(name)}</h3>
+            <div class="meta">使用次数：<b>${r.n}</b></div>
+          </div>
+          <div class="actions">
+            <span class="pill">Top</span>
+          </div>
+        `;
+        el.appendChild(div);
+      });
+    }
+
+    $("statsRange").addEventListener("change", renderTopUsage);
+
+    // --- Export / Reset ---
+    $("btnExport").addEventListener("click", () => {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        bags: loadBags(),
+        checkins: loadCheckins()
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `bag-app-export-${todayISO()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    $("btnResetAll").addEventListener("click", () => {
+      if(!confirm("确定清空【包包存量 + 打卡记录】全部数据？不可恢复。")) return;
+      localStorage.removeItem(KEY_BAGS);
+      localStorage.removeItem(KEY_CHECKINS);
+      renderBags();
+      renderBagSelect();
+      renderRecentCheckins();
+      refreshStats();
+    });
+
+    // --- Service Worker (PWA) ---
+    if("serviceWorker" in navigator){
+      window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+    }
+
+    function escapeHtml(s){
+      return (s||"").replace(/[&<>"']/g, (c) => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[c]));
+    }
+
+    // --- Initial Render ---
+    renderBags();
+    renderBagSelect();
+    renderRecentCheckins();
+    refreshStats();
+  </script>
+</body>
+</html>
